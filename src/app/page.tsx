@@ -54,6 +54,10 @@ export default async function Home() {
           <a href="/llms.txt" className="text-emerald-300 hover:text-emerald-200">
             /llms.txt
           </a>
+          . Bulk download:{" "}
+          <a href="/urls.txt" className="text-emerald-300 hover:text-emerald-200">
+            /urls.txt
+          </a>
           .
         </p>
         <div className="mt-6 flex flex-wrap gap-3 text-sm">
