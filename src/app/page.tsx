@@ -49,6 +49,13 @@ export default async function Home() {
         <p className="mt-4 max-w-3xl text-zinc-300">
           Submit your own redacted GitHub gist. We verify gist ownership, keep only metadata, and moderate before listing.
         </p>
+        <p className="mt-3 text-sm text-zinc-400">
+          Using an agent? Point it to{" "}
+          <a href="/llms.txt" className="text-emerald-300 hover:text-emerald-200">
+            /llms.txt
+          </a>
+          .
+        </p>
         <div className="mt-6 flex flex-wrap gap-3 text-sm">
           <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-3 py-1.5 text-emerald-200">
             approved: {approvedCount}
