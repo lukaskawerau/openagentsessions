@@ -93,8 +93,8 @@ jobs:
           POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
           NEXTAUTH_URL=https://openagentsessions.org
           NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
-          GITHUB_CLIENT_ID=${{ secrets.GITHUB_CLIENT_ID }}
-          GITHUB_CLIENT_SECRET=${{ secrets.GITHUB_CLIENT_SECRET }}
+          GITHUB_CLIENT_ID=${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET=${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
           MODERATOR_GITHUB_IDS=${{ secrets.MODERATOR_GITHUB_IDS }}
           HETZNER_S3_ENDPOINT=${{ secrets.HETZNER_S3_ENDPOINT }}
           HETZNER_S3_BUCKET=${{ secrets.HETZNER_S3_BUCKET }}
