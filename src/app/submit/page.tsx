@@ -41,7 +41,8 @@ export default async function SubmitPage() {
       <section className="space-y-3">
         <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Submit a session</h1>
         <p className="text-zinc-300">
-          Requirements: public gist, your own account, no forks, secrets removed, CC0 intent confirmed.
+          Requirements: public gist, your own account, no forks, secrets removed, CC0 intent confirmed, and an
+          <code className="mx-1 rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-100">openagentsessions.json</code> metadata file.
         </p>
       </section>
 

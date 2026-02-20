@@ -4,6 +4,25 @@ import { StateBadge } from "@/components/state-badge";
 
 export const dynamic = "force-dynamic";
 
+const metadataExample = JSON.stringify(
+  {
+    schema_version: "1.0",
+    license: "CC0-1.0",
+    consent_confirmed: true,
+    redaction_done: true,
+    created_at: "2026-02-20T00:00:00Z",
+    session: {
+      agent: "pi-coding-agent",
+      model: "claude-sonnet-4",
+      language: "typescript",
+      topic: "sveltekit auth debugging",
+    },
+    tags: ["bugfix", "svelte", "auth"],
+  },
+  null,
+  2,
+);
+
 export default async function Home() {
   const [approvedCount, pendingCount, submissions] = await Promise.all([
     prisma.submission.count({ where: { state: "APPROVED" } }),
@@ -38,6 +57,50 @@ export default async function Home() {
             pending: {pendingCount}
           </div>
         </div>
+      </section>
+
+      <section className="space-y-4 rounded-3xl border border-zinc-800 bg-zinc-900/40 p-8">
+        <h2 className="text-xl font-semibold text-zinc-100">Expected gist metadata file</h2>
+        <p className="text-zinc-300">
+          Add a <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-100">openagentsessions.json</code> file to your gist
+          root. Submissions missing this file may be rejected by moderators.
+        </p>
+
+        <div className="grid gap-4 text-sm text-zinc-300 md:grid-cols-2">
+          <ul className="list-disc space-y-1 pl-5">
+            <li>
+              <code className="rounded bg-zinc-800 px-1 py-0.5">schema_version</code> (current: <code>&quot;1.0&quot;</code>)
+            </li>
+            <li>
+              <code className="rounded bg-zinc-800 px-1 py-0.5">license</code> must be <code>&quot;CC0-1.0&quot;</code>
+            </li>
+            <li>
+              <code className="rounded bg-zinc-800 px-1 py-0.5">consent_confirmed</code>: <code>true</code>
+            </li>
+            <li>
+              <code className="rounded bg-zinc-800 px-1 py-0.5">redaction_done</code>: <code>true</code>
+            </li>
+          </ul>
+
+          <ul className="list-disc space-y-1 pl-5">
+            <li>
+              <code className="rounded bg-zinc-800 px-1 py-0.5">created_at</code>: ISO timestamp
+            </li>
+            <li>
+              <code className="rounded bg-zinc-800 px-1 py-0.5">session.agent</code>: tooling name
+            </li>
+            <li>
+              <code className="rounded bg-zinc-800 px-1 py-0.5">session.model</code>: model name
+            </li>
+            <li>
+              <code className="rounded bg-zinc-800 px-1 py-0.5">tags</code>: optional string array
+            </li>
+          </ul>
+        </div>
+
+        <pre className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-xs text-zinc-200">
+          <code>{metadataExample}</code>
+        </pre>
       </section>
 
       <section className="space-y-4">
