@@ -2,11 +2,8 @@
 
 import { useActionState } from "react";
 
-import {
-  initialSubmissionState,
-  submitGistAction,
-  type SubmissionFormState,
-} from "@/app/submit/actions";
+import { submitGistAction } from "@/app/submit/actions";
+import { initialSubmissionState, type SubmissionFormState } from "@/app/submit/types";
 
 export function SubmitForm() {
   const [state, formAction, isPending] = useActionState<SubmissionFormState, FormData>(

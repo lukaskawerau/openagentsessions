@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getAuthSession } from "@/lib/auth";
 import { verifyOwnedPublicGist } from "@/lib/gists";
 import { prisma } from "@/lib/prisma";
+import type { SubmissionFormState } from "./types";
 
 const submitSchema = z.object({
   gistUrl: z.url("Paste a valid gist URL."),
@@ -14,16 +15,6 @@ const submitSchema = z.object({
     error: "Confirm rights + redaction before submitting.",
   }),
 });
-
-export type SubmissionFormState = {
-  status: "idle" | "error" | "success";
-  message: string;
-};
-
-export const initialSubmissionState: SubmissionFormState = {
-  status: "idle",
-  message: "",
-};
 
 export async function submitGistAction(
   _previousState: SubmissionFormState,
