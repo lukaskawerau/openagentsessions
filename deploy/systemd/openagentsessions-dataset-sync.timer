@@ -1,0 +1,11 @@
+[Unit]
+Description=Run openagentsessions.org dataset sync every 15 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+Unit=openagentsessions-dataset-sync.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

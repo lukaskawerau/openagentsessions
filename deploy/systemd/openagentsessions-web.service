@@ -1,0 +1,26 @@
+[Unit]
+Description=openagentsessions.org Next.js web app
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/srv/openagentsessions
+EnvironmentFile=/srv/openagentsessions/.env.production
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStartPre=/usr/bin/env pnpm db:migrate:deploy
+ExecStart=/usr/bin/env pnpm start
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/srv/openagentsessions
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=openagentsessions.org dataset export + Hetzner S3 sync
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=deploy
+Group=deploy
+WorkingDirectory=/srv/openagentsessions
+EnvironmentFile=/srv/openagentsessions/.env.production
+ExecStart=/usr/bin/env pnpm dataset:publish
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/srv/openagentsessions

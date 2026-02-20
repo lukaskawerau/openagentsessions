@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  MODERATOR
+}
+
+enum SubmissionState {
+  PENDING
+  APPROVED
+  REJECTED
+  REMOVED
+}
+
+model User {
+  id             String          @id @default(cuid())
+  githubId       String          @unique
+  githubLogin    String          @unique
+  name           String?
+  email          String?
+  image          String?
+  role           UserRole        @default(USER)
+  submissions    Submission[]
+  moderationLogs ModerationLog[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Submission {
+  id                  String          @id @default(cuid())
+  gistId              String          @unique
+  gistUrl             String
+  gistOwnerId         String
+  gistOwnerLogin      String
+  gistDescription     String?
+  gistVersion         String
+  gistUpdatedAt       DateTime
+  lastCheckedAt       DateTime
+  isAvailable         Boolean         @default(true)
+  state               SubmissionState @default(PENDING)
+  moderationReason    String?
+  submitterId         String
+  submitter           User            @relation(fields: [submitterId], references: [id], onDelete: Cascade)
+  lastModeratedById   String?
+  lastModeratedByName String?
+  lastModeratedAt     DateTime?
+  moderationLogs      ModerationLog[]
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@index([state, createdAt])
+  @@index([submitterId, createdAt])
+}
+
+model ModerationLog {
+  id           String          @id @default(cuid())
+  submissionId String
+  submission   Submission      @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  moderatorId  String
+  moderator    User            @relation(fields: [moderatorId], references: [id], onDelete: Cascade)
+  fromState    SubmissionState
+  toState      SubmissionState
+  reason       String?
+  createdAt    DateTime        @default(now())
+
+  @@index([submissionId, createdAt])
+  @@index([moderatorId, createdAt])
+}

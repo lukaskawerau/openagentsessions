@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# openagentsessions.org (MVP)
 
-## Getting Started
+Public index of coding-agent sessions for open model training.
 
-First, run the development server:
+Current policy: store metadata only. Actual session content lives in public GitHub gists.
+
+## MVP scope
+
+- GitHub OAuth login
+- Submit public gist URL
+- Verify gist owner matches logged-in GitHub account
+- Reject forked or non-public gists
+- Store submission metadata in Postgres
+- Moderator queue (`approve`, `reject`, `remove`)
+
+## Tech
+
+- Next.js (App Router, TypeScript)
+- NextAuth (GitHub provider, JWT session)
+- Prisma + Postgres
+
+## Setup
+
+1. Install deps
+
+   ```bash
+   pnpm install
+   ```
+
+2. Create env file
+
+   ```bash
+   cp .env.example .env
+   ```
+
+3. Fill `.env`
+
+   - `DATABASE_URL`
+   - `NEXTAUTH_SECRET`
+   - `GITHUB_CLIENT_ID`
+   - `GITHUB_CLIENT_SECRET`
+   - `MODERATOR_GITHUB_IDS` (GitHub numeric IDs)
+   - For production, start from `.env.production.example`
+
+4. Apply schema
+
+   ```bash
+   pnpm db:migrate
+   pnpm db:generate
+   ```
+
+5. Run
+
+   ```bash
+   pnpm dev
+   ```
+
+## Production deploy essentials
+
+- Domain: `openagentsessions.org`
+- OAuth callback: `https://openagentsessions.org/api/auth/callback/github`
+- Apply migrations in prod with:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm db:migrate:deploy
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Full Hetzner runbook: [`docs/deploy-hetzner.md`](docs/deploy-hetzner.md)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Dataset export (static files)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Generate static artifacts from approved submissions:
 
-## Learn More
+```bash
+pnpm dataset:export
+```
 
-To learn more about Next.js, take a look at the following resources:
+Default output dir: `.dataset/`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `.dataset/latest/urls.txt`
+- `.dataset/latest/submissions.ndjson`
+- `.dataset/latest/manifest.json`
+- `.dataset/snapshots/<timestamp>/...` (immutable snapshot)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Custom output dir:
 
-## Deploy on Vercel
+```bash
+DATASET_OUTPUT_DIR=./dataset pnpm dataset:export
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Upload `latest/` and `snapshots/` to S3/R2 and serve behind CDN.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Hetzner S3 publish (template):
+
+```bash
+aws s3 sync .dataset s3://openagentsessions-dataset \
+  --endpoint-url https://<your-endpoint> \
+  --delete
+```
+
+Or use the scripted flow:
+
+```bash
+pnpm dataset:publish
+```
+
+## Notes
+
+- Ownership check verifies gist owner account == logged-in GitHub account.
+- Still requires user attestation for rights/provenance + redaction.
+- For now, no ingestion of raw session content into DB.
