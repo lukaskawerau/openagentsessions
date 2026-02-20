@@ -47,6 +47,8 @@ services:
 
 volumes:
   pgdata:
+    external: true
+    name: docker_pgdata
   caddy_data:
   caddy_config:
   caddy_logs:
