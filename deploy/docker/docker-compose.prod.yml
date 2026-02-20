@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/lukaskawerau/opensesh:${APP_VERSION:-latest}
+    image: ghcr.io/lukaskawerau/openagentsessions:${APP_VERSION:-latest}
     container_name: opensesh_app
     restart: unless-stopped
     env_file: .env.production
