@@ -1,0 +1,157 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: opensesh-deploy
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  DEPLOY_HOST: openagentsessions
+  DEPLOY_USER: root
+  DEPLOY_PATH: /opt/app
+
+jobs:
+  build:
+    name: Build & Push Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=long,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Upload deployment config
+        run: |
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            deploy/docker/docker-compose.prod.yml \
+            deploy/docker/Caddyfile \
+            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_PATH }}/
+
+      # Unquoted outer heredoc so GitHub expands ${{ secrets.* }}
+      # Quoted inner heredoc so remote shell doesn't expand values
+      - name: Write .env.production
+        run: |
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << ENVSSH
+          cat > ${{ env.DEPLOY_PATH }}/.env.production << 'EOF'
+          DATABASE_URL=postgresql://opensesh:${{ secrets.DB_PASSWORD }}@db:5432/opensesh?schema=public
+          POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
+          NEXTAUTH_URL=https://openagentsessions.org
+          NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+          GITHUB_CLIENT_ID=${{ secrets.GITHUB_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET=${{ secrets.GITHUB_CLIENT_SECRET }}
+          MODERATOR_GITHUB_IDS=${{ secrets.MODERATOR_GITHUB_IDS }}
+          HETZNER_S3_ENDPOINT=${{ secrets.HETZNER_S3_ENDPOINT }}
+          HETZNER_S3_BUCKET=${{ secrets.HETZNER_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          EOF
+          ENVSSH
+
+      - name: Deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << DEPLOYEOF
+          set -e
+          cd ${{ env.DEPLOY_PATH }}
+
+          # Login to GHCR
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
+          # Make env vars available for compose variable substitution
+          cp .env.production .env
+          export APP_VERSION=${{ needs.build.outputs.image_tag }}
+
+          # Pull new image
+          docker compose -f docker-compose.prod.yml pull app
+
+          # Start database
+          docker compose -f docker-compose.prod.yml up -d db
+
+          # Wait for PostgreSQL
+          echo "Waiting for PostgreSQL..."
+          for i in \$(seq 1 30); do
+            if docker compose -f docker-compose.prod.yml exec -T db pg_isready -U opensesh > /dev/null 2>&1; then
+              echo "PostgreSQL ready"
+              break
+            fi
+            sleep 2
+          done
+
+          # Run migrations
+          echo "Running migrations..."
+          docker compose -f docker-compose.prod.yml run --rm -T app sh -c "prisma migrate deploy"
+
+          # Start app + caddy
+          docker compose -f docker-compose.prod.yml up -d app caddy
+
+          # Health check
+          echo "Waiting for app..."
+          for i in \$(seq 1 15); do
+            if docker compose -f docker-compose.prod.yml exec -T app \
+              node -e "require('http').get('http://127.0.0.1:3000', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))" 2>/dev/null; then
+              echo "App is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Health check failed"
+          docker compose -f docker-compose.prod.yml logs --tail=50 app
+          exit 1
+          DEPLOYEOF

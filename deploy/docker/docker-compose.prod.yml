@@ -1,0 +1,55 @@
+services:
+  app:
+    image: ghcr.io/lukaskawerau/opensesh:${APP_VERSION:-latest}
+    container_name: opensesh_app
+    restart: unless-stopped
+    env_file: .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+
+  db:
+    image: postgres:16-alpine
+    container_name: opensesh_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: opensesh
+      POSTGRES_USER: opensesh
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opensesh"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - internal
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: opensesh_caddy
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    depends_on:
+      - app
+    networks:
+      - internal
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+  caddy_logs:
+
+networks:
+  internal:
