@@ -16,7 +16,7 @@ fi
 : "${AWS_ACCESS_KEY_ID:?Missing AWS_ACCESS_KEY_ID}"
 : "${AWS_SECRET_ACCESS_KEY:?Missing AWS_SECRET_ACCESS_KEY}"
 
-DATASET_OUTPUT_DIR="${DATASET_OUTPUT_DIR:-.dataset}"
+DATASET_OUTPUT_DIR="${DATASET_OUTPUT_DIR:-/tmp/dataset}"
 
 node scripts/export-dataset.mjs
 
