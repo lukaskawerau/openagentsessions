@@ -22,6 +22,7 @@ node scripts/export-dataset.mjs
 
 aws s3 sync "$DATASET_OUTPUT_DIR" "s3://$HETZNER_S3_BUCKET" \
   --endpoint-url "$HETZNER_S3_ENDPOINT" \
+  --acl public-read \
   --delete \
   --no-progress
 
